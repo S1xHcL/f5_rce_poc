@@ -13,6 +13,11 @@ python3 f5_rce.py
 
 ![](./1.png)
 
+```
+python3 f5_rce.py -u 127.0.0.1 --ssrf
+```
+执行命令后输入`exit`退出
+
 ![](./ssrf.png)
 
 PS：输出不够美感，我会修改的😁
